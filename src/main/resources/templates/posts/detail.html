@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>DETAIL</h1>
+
+    <h2 th:text="${post.title}"></h2>
+    <p th:text="${post.createdAt}"></p>
+    <p th:text="${post.content}"></p>
+
+    <a href="/posts">목록</a>
+    <a th:href="@{/posts/{id}/edit(id=${post.id})}">수정</a>
+
+
+    <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post">
+        <button type="submit" onclick="return confirm('delete?')">삭제</button>
+    </form>
+
+
+</body>
+</html>
