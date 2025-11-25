@@ -5,6 +5,8 @@ import com.example.board.entity.Post;
 import com.example.board.repository.PostRepository;
 import com.example.board.service.PostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +25,28 @@ public class PostController {
 //    }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("posts", postService.getAllPosts());
+    public String list(
+            @PageableDefault(
+                    size= 10,
+                    sort = "id",
+                    direction = Sort.Direction.DESC)
+                    Pageable pageable,
+            Model model) {
+
+//        model.addAttribute("posts", postService.getAllPosts());
+        Page<Post> postPage = postService.getPostsPage(pageable);
+//        model.addAttribute("posts", postPage.getContent());
+
+        int currentPage = postPage.getNumber();
+        int totalPages = postPage.getTotalPages();
+        int startPage = Math.max(0, currentPage - 5);
+        int endPage = Math.min(totalPages - 1, currentPage + 5);
+
+        model.addAttribute("postPage", postPage);
+        model.addAttribute("startPage", startPage);
+        model.addAttribute("endPage", endPage);
         return "posts/list";
+
     }
 
     @GetMapping("/{id}")
@@ -65,7 +86,7 @@ public class PostController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id) {
         postService.deletePost(id);
-        return "redirect:/posts/";
+        return "redirect:/posts";
     }
 
     @GetMapping("/test/cache")
@@ -81,16 +102,52 @@ public class PostController {
     }
 
     @GetMapping("/test/dirty-checking")
-    public String testDirtyCheking(){
+    public String testDirtyChecking(){
         postService.testDirtyChecking();
         return "redirect:/posts";
     }
 
     @GetMapping("/search")
-    public String search(@RequestParam String keyword, Model model) {
-        List<Post> posts = postService.searchPosts(keyword);
-        model.addAttribute("posts", posts);
+    public String search(
+            @RequestParam String keyword,
+            @PageableDefault(sort= "id") Pageable pageable,
+            Model model) {
+        Page<Post> postPage = postService.searchPostsPage(keyword, pageable);
+
+        int currentPage = postPage.getNumber();
+        int totalPages = postPage.getTotalPages();
+        int startPage = Math.max(0, currentPage - 5);
+        int endPage = Math.min(totalPages - 1, currentPage + 5);
+
+        model.addAttribute("postPage", postPage);
+        model.addAttribute("startPage", startPage);
+        model.addAttribute("endPage", endPage);
+        model.addAttribute("keyword", keyword);
+        return "posts/search";
+    }
+
+    // 최근 게시물 3개만 출력
+    // /posts/recent
+    @GetMapping("/recent")
+    public String recent(Model model) {
+        model.addAttribute("posts", postService.getRecentPosts());
         return "posts/list";
     }
 
+    @GetMapping("/dummy")
+    public String dummy() {
+        postService.createDummyPosts(100);
+        return "redirect:/posts";
+    }
+
+    @GetMapping("/more")
+    public String more(
+            @PageableDefault Pageable pageable,
+            Model model
+    ) {
+        Slice<Post> postSlice = postService.getPostsSlice(pageable);
+        model.addAttribute("postSlice", postSlice);
+        return "posts/list-more";
+
+    }
 }

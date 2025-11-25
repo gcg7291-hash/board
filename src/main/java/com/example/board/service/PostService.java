@@ -5,6 +5,7 @@ import com.example.board.repository.PostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +27,8 @@ public class PostService {
     // Read (조회)
 //    @Transactional(readOnly = true)
     public Post getPostById(Long id) {
-       return postRepository.findById(id);
+       return postRepository.findById(id)
+               .orElseThrow(()-> new RuntimeException("post not found"));
         // readOnly = false
         //1. 엔티티 조회
         //2. 스냅샷 저장
@@ -38,9 +40,12 @@ public class PostService {
         //2. 읽기 끝나면 끝
     }
 
-    // 전체 데이터 가져오기
+    // 전체 데이터 가져오기 정렬
     public List<Post> getAllPosts() {
-       return postRepository.findAll();
+//       return postRepository.findAll(
+//               Sort.by(Sort.Direction.DESC, "id")
+//       );
+        return postRepository.findAllByOrderByIdDesc();
     }
 
     // 수정
@@ -49,7 +54,7 @@ public class PostService {
         Post post = getPostById(id);
         post.setTitle(updatedPost.getTitle());
         post.setContent(updatedPost.getContent());
-        return postRepository.update(post);
+        return post;
     }
 
     // 삭제
@@ -61,10 +66,10 @@ public class PostService {
 
     @Transactional(readOnly = true)
     public void testFirstLevelCache() {
-       Post post1 = postRepository.findById(1L);
+       Post post1 = postRepository.findById(1L).orElseThrow();
         System.out.println(post1.getTitle());
 
-       Post post2 = postRepository.findById(1L);
+       Post post2 = postRepository.findById(1L).orElseThrow();
         System.out.println(post2.getTitle());
 
         System.out.println(post1 == post2);
@@ -72,7 +77,7 @@ public class PostService {
 
     @Transactional
     public void testWriteBehind(){
-       Post post = postRepository.findById(1L);
+       Post post = postRepository.findById(1L).orElseThrow();
        post.setTitle("hello!!!!");
        System.out.println("update1");
 
@@ -87,7 +92,7 @@ public class PostService {
 
     @Transactional
     public void testDirtyChecking() {
-       Post post = postRepository.findById(1L);
+       Post post = postRepository.findById(1L).orElseThrow();
         System.out.println("SELECT!!!");
 
         post.setTitle("hello!!!!");
@@ -98,6 +103,41 @@ public class PostService {
     public List<Post> searchPosts(String keyword) {
        return postRepository.findByTitleContaining(keyword);
     }
+
+    public List<Post> searchPostsByTitleOrContent(String keyword) {
+//       return postRepository.findByTitleContainingOrContentContaining(keyword, keyword);
+//        return postRepository.searchByKeyword(keyword);
+        return postRepository.searchByTitleNative(keyword);
+    }
+
+    public List<Post> getRecentPosts() {
+//    return postRepository.findTop3ByOrderByCreatedAtDesc();
+        return postRepository.findRecentPosts(PageRequest.of(0, 3));
+//        return postRepository.findRecentPostsNative();
+
+   }
+
+    public Page<Post> getPostsPage(Pageable pageable) {
+       return postRepository.findAll(pageable);
+    }
+
+    @Transactional
+    public void createDummyPosts(int count) {
+        for (int i = 0; i <= count; i++) {
+            Post post = new Post(i +"번 제목", "게시물 내용");
+            postRepository.save(post);
+        }
+    }
+
+    public Page<Post> searchPostsPage(String keyword, Pageable pageable) {
+       return postRepository.findByTitleContaining(keyword, pageable);
+    }
+
+    public Slice<Post> getPostsSlice(Pageable pageable) {
+       return postRepository.findAllBy(pageable);
+    }
+
+
 
 
 }

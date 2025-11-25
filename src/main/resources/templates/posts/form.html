@@ -5,7 +5,7 @@
     <title>Title</title>
 </head>
 <body>
-<h1>FORM</h1>
+<h1 th:text="${post.id == null} ? '새로운 게시물' : '게시물 수정'"></h1>
 
 <form th:action="${post.id != null} ? @{/posts/{id}(id=${post.id})} : @{/posts}"
       th:object="${post}" method="post">
@@ -18,8 +18,8 @@
               id="content"
     >
         </textarea>
+    <input th:value="${post.id == null} ? '생성하기' : '게시물 수정' " type="submit">
 
-    <input type="submit">
 
 </form>
 </body>

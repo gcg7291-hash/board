@@ -1,64 +1,101 @@
 package com.example.board.repository;
 
-
 import com.example.board.entity.Post;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public class PostRepository {
+public interface PostRepository extends JpaRepository<Post, Long> { //인터페이스 정의만 해주는거
+    // JpaReopository에서  6가지를 자동으로 구현해줌
+    // 기본 CRUD 메서드
 
-    @PersistenceContext
-    private EntityManager em;
+    // 저장
+    // save() => Post save(Post entity), 저장 (INSERT or UPDATE)  JpaRepositrory<Post, Long>
+    // 아이디가 없으면 INSERT, 아이디가 있으면 수정
 
-     // CRUD 구현
-    public Post save(Post post) {
-        em.persist(post); //persist 영구적인 em => 관리자역할
-        return post;
-    }
+    // 조회
+    // findById() => Optional<Post> findById(Long id);
+    // findAll() => List<Post> findAll();
+    // List<Post> findAll(Sort sort); 오버로딩
 
-    public Post findById(Long id) {
-        return em.find(Post.class, id); //2개의 정보를 넣어야함
-    }
+    // 삭제
+    // deleteById() => void deleteById(Long id);  void delete(Post entity); 삭제라 리턴값이 필요없음
 
-    public List<Post> findAll() {
-        // Entity Manager => 단일 엔티티 조작만 기본 제공
-        String jpql = "SELECT p FROM Post p"; // Post 객체 접근  jpql 약어를 반드시 작성해야함 Post의 전체데이터
-       return em.createQuery(jpql, Post.class).getResultList();
-    }
+    // 갯수 조회
+    // count() => long count(); 갯수 조회,
 
-    public Post update(Post post) {
-        return em.merge(post); // persist, find , merge, remove
-    }
+    // 존재 여부 확인
+    // existsById() => boolean existsById(Long id); 아이디 기준으로 존재여부 판단
 
-    public void delete(Post post) {
-        em.remove(post);
-    }
+    // findBy + 필드명 + 조건
 
-    public List<Post> findByTitleContaining(String keyword) {
-        String jpql = "SELECT p FROM Post p WHERE p.title LIKE :keyword ";
-        return em.createQuery(jpql, Post.class).setParameter("keyword","%"+ keyword + "%").getResultList();
-    }
+    // LIKE %keyword% 단점 코드가 길어지면 가독성이 떨어짐
+    List<Post> findByTitleContaining(String keyword);
 
-    // 1. 비영속 (id가 부여되지 않음)
-    // new Post('title', 'content');
-
-    // 2. 영속 (id가 부여됨)
-    // em.persist(post);
-
-    // => detach(), clear()
-
-    // 3. 준영속 (detached 수정하는중)
-    // em.detach(post);
-
-    // => merger() => 영속으로 돌아감
-
-    // 4. 삭제
-    // em.remove(post)
+    // @Query 방식  직접 쿼리문 작성으로 searchBytitle로 함 % : %  위에 방식이랑 같음 @Param("") 을 설정해줘야함
+    @Query("SELECT p FROM Post p WHERE p.title LIKE %:keyword%")
+    List<Post> searchByTitle(@Param("keyword") String keyword);
 
 
+    // LIKE keyword% 키워드로 시작하는 단어찾기
+    List<Post> findByTitleStartingWith(String keyword);
 
+    // > 초과
+    List<Post> findByIdGreaterThan(Long id);
+
+    // ORDER BY id DESC
+    List<Post> findAllByOrderByIdDesc();
+
+    // 제목 or 내용 으로 검색 쿼리메서드 방식
+    List<Post> findByTitleContainingOrContentContaining(String titleKeyword, String contentKeyword);
+
+    // 제목 내용 쿼리 방식
+    @Query("""
+            SELECT p FROM Post p 
+            WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% 
+            ORDER BY p.createdAt DESC
+    """)
+    List<Post> searchByKeyword(@Param("keyword") String keyword);
+
+    @Query(value="""
+        SELECT * FROM post 
+        WHERE title LIKE %:keyword% 
+        ORDER BY id DESC
+     """, nativeQuery=true)
+    List<Post> searchByTitleNative(@Param("keyword")  String keyword);
+
+    // 1.query method
+    List<Post> findTop3ByOrderByCreatedAtDesc();
+
+    // 2.jpql    createdAt 객체
+    @Query("""
+        SELECT p FROM Post p      
+        ORDER BY p.createdAt DESC
+""")
+    List<Post> findRecentPosts(Pageable pageable);
+
+
+    // 3.native sql  created_at table
+    // List<Post> findAll() => JpaRepository 가 구현 해준 메서드
+    // 오버로딩 (동일한 이름이지만 매개변수가 다름)
+
+    @Query (value="""
+            SELECT * FROM post
+            ORDER BY created_at DESC
+            LIMIT 3
+     """, nativeQuery=true)
+    List<Post> findRecentPostsNative();
+   Page<Post> findAll(Pageable pageable);
+
+   Page<Post> findByTitleContaining(String keyword, Pageable pageable);
+
+
+   Slice<Post> findAllBy(Pageable pageable);
 }
