@@ -46,7 +46,8 @@ public class PostService {
 //               Sort.by(Sort.Direction.DESC, "id")
 //       );
         return postRepository.findAllByOrderByIdDesc();
-    }
+
+   }
 
     // 수정
     @Transactional
@@ -137,7 +138,14 @@ public class PostService {
        return postRepository.findAllBy(pageable);
     }
 
+    public List<Post> getAllPostWithFetchJoin() {
+//        return postRepository.findAll();
+        return postRepository.findAllWithComments();
+    }
 
+    public List<Post> getAllPostsWithEntityGraph() {
+       return postRepository.findAllWithCommentsEntityGraph();
+    }
 
 
 }

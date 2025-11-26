@@ -1,8 +1,11 @@
 package com.example.board.controller;
 
+import com.example.board.dto.CommentDto;
 import com.example.board.dto.PostDto;
+import com.example.board.entity.Comment;
 import com.example.board.entity.Post;
 import com.example.board.repository.PostRepository;
+import com.example.board.service.CommentService;
 import com.example.board.service.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -18,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PostController {
     private final PostService postService;
+    private final CommentService commentService;
 //    private final PostRepository postRepository;
 
 //    public PostController(PostRepository postRepository) {
@@ -52,6 +56,11 @@ public class PostController {
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
         Post post = postService.getPostById(id);
+//        List<Comment> comments = commentService.getCommentsByPostId(id);
+        List<Comment> comments = post.getComments();
+
+        model.addAttribute("comment", new CommentDto());
+        model.addAttribute("comments", comments);
         model.addAttribute("post", post);
         return "posts/detail";
     }
@@ -148,6 +157,39 @@ public class PostController {
         Slice<Post> postSlice = postService.getPostsSlice(pageable);
         model.addAttribute("postSlice", postSlice);
         return "posts/list-more";
-
     }
+
+    // Comment 기능 구현
+    @PostMapping("/{postId}/comments")
+    public String createComment(
+            @PathVariable Long postId,
+            @ModelAttribute Comment comment
+    ){
+        commentService.createComment(postId, comment);
+        return "redirect:/posts/" + postId;
+    }
+
+    @PostMapping("/{postId}/comments/{cId}/delete")
+    public String deleteComment(
+            @PathVariable Long postId,
+            @PathVariable Long cId
+    ){
+        commentService.deleteComment(cId);
+        return "redirect:/posts/" + postId;
+    }
+
+    @GetMapping("/fetch-join")
+    public String listWithFetchJoin(Model model) {
+        List<Post> posts = postService.getAllPostWithFetchJoin();
+        model.addAttribute("posts", posts);
+        return "posts/list-test";
+    }
+
+    @GetMapping("/entity-graph")
+    public String listhWithEntitiyGraph(Model model) {
+        List<Post> posts = postService.getAllPostsWithEntityGraph();
+        model.addAttribute("posts", posts);
+        return "posts/list-test";
+    }
+
 }

@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "post")
@@ -37,6 +40,23 @@ public class Post {
         this.createdAt = LocalDateTime.now();
     }
 
+    // 연관관계 편의메서드
+    public void addComment(Comment comment) {
+        comments.add(comment);
+        comment.setPost(this);
+    }
+
+    public void removeComment(Comment comment) {
+        comments.remove(comment);
+        comment.setPost(null);
+    }
+
+//    @BatchSize(size=10)
+    @OneToMany(mappedBy = "post",
+            cascade = CascadeType.REMOVE,
+            orphanRemoval = true
+    ) //cascade 상하관계
+    public List<Comment> comments = new ArrayList<>(); // 댓글이없을수도 잇어서 null값이 출력되면 안되니 빈 ArrayList생성
 
 
 }
